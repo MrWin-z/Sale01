@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lead Detail | Real Estate Sales</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">VERZO CRM</div>
+      <nav class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="index.html">Leads</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div>
+          <h1 id="customerName">Lead Detail</h1>
+          <p id="customerSub">ประวัติลูกค้าและการติดตาม</p>
+        </div>
+        <a class="btn-secondary btn" href="index.html">กลับหน้า Lead</a>
+      </div>
+
+      <section class="grid grid-2" style="margin-bottom: 20px;">
+        <div class="card">
+          <h2>ข้อมูลลูกค้า</h2>
+          <div id="leadInfo"></div>
+        </div>
+
+        <div class="card">
+          <h2>อัปเดตสถานะ / Follow-up</h2>
+
+          <form id="updateForm" class="form">
+            <div>
+              <label>Status</label>
+              <select name="status">
+                <option>New Lead</option>
+                <option>Contacted</option>
+                <option>Interested</option>
+                <option>Appointment</option>
+                <option>Walk-in</option>
+                <option>Booking</option>
+                <option>Loan Process</option>
+                <option>Transfer</option>
+                <option>Lost</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Priority</label>
+              <select name="priority">
+                <option>Hot</option>
+                <option>Warm</option>
+                <option>Cold</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Next Follow Date</label>
+              <input type="date" name="next_follow_date" />
+            </div>
+
+            <div>
+              <label>Next Action</label>
+              <input name="next_action" placeholder="เช่น โทรติดตาม / นัดเข้าชม" />
+            </div>
+
+            <div>
+              <label>Note หลัก</label>
+              <textarea name="note"></textarea>
+            </div>
+
+            <button type="submit">อัปเดตข้อมูล</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="grid grid-2">
+        <div class="card">
+          <h2>เพิ่ม Activity / Note</h2>
+
+          <form id="activityForm" class="form">
+            <div>
+              <label>ประเภท</label>
+              <select name="type">
+                <option>Call</option>
+                <option>LINE</option>
+                <option>Follow-up</option>
+                <option>Walk-in</option>
+                <option>Loan</option>
+                <option>Note</option>
+              </select>
+            </div>
+
+            <div>
+              <label>รายละเอียด</label>
+              <textarea name="note" required placeholder="สรุปสิ่งที่คุยกับลูกค้า"></textarea>
+            </div>
+
+            <div>
+              <label>ผู้บันทึก</label>
+              <input name="created_by" placeholder="ชื่อเซลล์" />
+            </div>
+
+            <button type="submit">บันทึก Activity</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Timeline</h2>
+          <div id="timeline" class="timeline"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get("lead_id");
+
+    let currentLead = null;
+
+    async function loadLeadDetail() {
+      const result = await apiGet("getLeadDetail", { lead_id: leadId });
+
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+
+      currentLead = result.data.lead;
+      const activities = result.data.activities || [];
+
+      document.getElementById("customerName").innerText = currentLead.customer_name || "Lead Detail";
+      document.getElementById("customerSub").innerText = `${currentLead.phone || "-"} | ${currentLead.project || "-"}`;
+
+      document.getElementById("leadInfo").innerHTML = `
+        <table>
+          <tbody>
+            <tr><td>เบอร์</td><td>${safe(currentLead.phone)}</td></tr>
+            <tr><td>โครงการ</td><td>${safe(currentLead.project)}</td></tr>
+            <tr><td>แบบบ้าน</td><td>${safe(currentLead.house_type)}</td></tr>
+            <tr><td>งบ</td><td>${money(currentLead.budget)}</td></tr>
+            <tr><td>รายได้</td><td>${money(currentLead.income)}</td></tr>
+            <tr><td>Source</td><td>${safe(currentLead.source)}</td></tr>
+            <tr><td>Status</td><td>${statusBadge(currentLead.status)}</td></tr>
+            <tr><td>Priority</td><td>${priorityBadge(currentLead.priority)}</td></tr>
+            <tr><td>Next Action</td><td>${safe(currentLead.next_action)}</td></tr>
+            <tr><td>Follow Date</td><td>${safe(currentLead.next_follow_date)}</td></tr>
+            <tr><td>เซลล์</td><td>${safe(currentLead.sales_owner)}</td></tr>
+            <tr><td>Note</td><td>${safe(currentLead.note)}</td></tr>
+          </tbody>
+        </table>
+      `;
+
+      const updateForm = document.getElementById("updateForm");
+      updateForm.status.value = currentLead.status || "New Lead";
+      updateForm.priority.value = currentLead.priority || "Warm";
+      updateForm.next_follow_date.value = currentLead.next_follow_date ? String(currentLead.next_follow_date).slice(0, 10) : "";
+      updateForm.next_action.value = currentLead.next_action || "";
+      updateForm.note.value = currentLead.note || "";
+
+      document.getElementById("timeline").innerHTML = activities.map(item => `
+        <div class="timeline-item">
+          <strong>${safe(item.type)}</strong>
+          <p>${safe(item.note)}</p>
+          <small>${safe(item.created_at)} | ${safe(item.created_by)}</small>
+        </div>
+      `).join("") || "<p>ยังไม่มี Activity</p>";
+    }
+
+    document.getElementById("updateForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = Object.fromEntries(new FormData(e.target).entries());
+      payload.lead_id = leadId;
+
+      const result = await apiPost("updateLead", payload);
+
+      if (result.success) {
+        await apiPost("addActivity", {
+          lead_id: leadId,
+          type: "Update",
+          note: `อัปเดตสถานะเป็น ${payload.status} | Next Action: ${payload.next_action}`,
+          created_by: currentLead.sales_owner || "System"
+        });
+
+        alert("อัปเดตเรียบร้อย");
+        loadLeadDetail();
+      } else {
+        alert(result.message);
+      }
+    });
+
+    document.getElementById("activityForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = Object.fromEntries(new FormData(e.target).entries());
+      payload.lead_id = leadId;
+
+      const result = await apiPost("addActivity", payload);
+
+      if (result.success) {
+        alert("บันทึก Activity เรียบร้อย");
+        e.target.reset();
+        loadLeadDetail();
+      } else {
+        alert(result.message);
+      }
+    });
+
+    loadLeadDetail();
+  </script>
+</body>
+</html>

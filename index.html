@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lead CRM | Real Estate Sales</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">VERZO CRM</div>
+      <nav class="nav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="index.html" class="active">Leads</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div>
+          <h1>Lead Management</h1>
+          <p>เพิ่ม Lead ใหม่ และดูรายชื่อลูกค้าทั้งหมด</p>
+        </div>
+        <a class="btn" href="dashboard.html">ไปหน้า Dashboard</a>
+      </div>
+
+      <section class="card" style="margin-bottom: 20px;">
+        <h2>เพิ่ม Lead ใหม่</h2>
+
+        <form id="leadForm" class="form">
+          <div class="form-row">
+            <div>
+              <label>ชื่อลูกค้า</label>
+              <input name="customer_name" required placeholder="เช่น คุณเอ" />
+            </div>
+            <div>
+              <label>เบอร์โทร</label>
+              <input name="phone" required placeholder="08x-xxx-xxxx" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>โครงการ</label>
+              <select name="project">
+                <option value="Verzo Valley Rama 2">Verzo Valley Rama 2</option>
+                <option value="Verzo Samaedum-Bangkhuntien">Verzo Samaedum-Bangkhuntien</option>
+                <option value="Vieste Rama 2">Vieste Rama 2</option>
+              </select>
+            </div>
+            <div>
+              <label>แบบบ้าน</label>
+              <select name="house_type">
+                <option value="">ไม่ระบุ</option>
+                <option value="บ้านเดี่ยว">บ้านเดี่ยว</option>
+                <option value="บ้านแฝด">บ้านแฝด</option>
+                <option value="ทาวน์โฮม">ทาวน์โฮม</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>งบประมาณ</label>
+              <input name="budget" type="number" placeholder="เช่น 4000000" />
+            </div>
+            <div>
+              <label>รายได้</label>
+              <input name="income" type="number" placeholder="เช่น 50000" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Source</label>
+              <select name="source">
+                <option value="Facebook">Facebook</option>
+                <option value="LINE OA">LINE OA</option>
+                <option value="Walk-in">Walk-in</option>
+                <option value="Referral">Referral</option>
+                <option value="Website">Website</option>
+                <option value="Manual">Manual</option>
+              </select>
+            </div>
+            <div>
+              <label>เซลล์ผู้ดูแล</label>
+              <input name="sales_owner" placeholder="ชื่อเซลล์" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label>Priority</label>
+              <select name="priority">
+                <option value="Warm">Warm</option>
+                <option value="Hot">Hot</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
+            <div>
+              <label>วันที่ต้อง Follow</label>
+              <input name="next_follow_date" type="date" />
+            </div>
+          </div>
+
+          <div>
+            <label>Next Action</label>
+            <input name="next_action" placeholder="เช่น โทรติดตาม / ส่งโปร / นัดดูบ้าน" />
+          </div>
+
+          <div>
+            <label>Note</label>
+            <textarea name="note" placeholder="รายละเอียดลูกค้าเบื้องต้น"></textarea>
+          </div>
+
+          <button type="submit">บันทึก Lead</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="header">
+          <div>
+            <h2>Lead ทั้งหมด</h2>
+            <p>คลิกชื่อ Lead เพื่อดูประวัติ</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <input id="searchInput" placeholder="ค้นหาชื่อ / เบอร์ / โครงการ" />
+          <select id="statusFilter">
+            <option value="">ทุกสถานะ</option>
+            <option>New Lead</option>
+            <option>Contacted</option>
+            <option>Interested</option>
+            <option>Appointment</option>
+            <option>Walk-in</option>
+            <option>Booking</option>
+            <option>Loan Process</option>
+            <option>Transfer</option>
+            <option>Lost</option>
+          </select>
+          <button class="btn-secondary" onclick="loadLeads()">ค้นหา</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ลูกค้า</th>
+                <th>เบอร์</th>
+                <th>โครงการ</th>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Follow</th>
+                <th>เซลล์</th>
+              </tr>
+            </thead>
+            <tbody id="leadTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    const form = document.getElementById("leadForm");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const payload = Object.fromEntries(new FormData(form).entries());
+
+      const result = await apiPost("createLead", payload);
+
+      if (result.success) {
+        alert("บันทึก Lead เรียบร้อย");
+        form.reset();
+        loadLeads();
+      } else {
+        alert("Error: " + result.message);
+      }
+    });
+
+    async function loadLeads() {
+      const q = document.getElementById("searchInput").value;
+      const status = document.getElementById("statusFilter").value;
+
+      const result = await apiGet("getLeads", { q, status });
+      const tbody = document.getElementById("leadTable");
+
+      if (!result.success) {
+        tbody.innerHTML = `<tr><td colspan="8">${result.message}</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = result.data.map(lead => `
+        <tr>
+          <td><a href="lead-detail.html?lead_id=${lead.lead_id}"><strong>${safe(lead.customer_name)}</strong></a></td>
+          <td>${safe(lead.phone)}</td>
+          <td>${safe(lead.project)}</td>
+          <td>${safe(lead.source)}</td>
+          <td>${statusBadge(lead.status)}</td>
+          <td>${priorityBadge(lead.priority)}</td>
+          <td>${safe(lead.next_follow_date)}<br><small>${safe(lead.next_action)}</small></td>
+          <td>${safe(lead.sales_owner)}</td>
+        </tr>
+      `).join("");
+    }
+
+    loadLeads();
+  </script>
+</body>
+</html>

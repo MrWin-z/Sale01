@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard | Real Estate Sales</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="logo">VERZO CRM</div>
+      <nav class="nav">
+        <a href="dashboard.html" class="active">Dashboard</a>
+        <a href="index.html">Leads</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <div class="header">
+        <div>
+          <h1>Sales & Marketing Dashboard</h1>
+          <p>ภาพรวม Lead, Walk-in, Booking และ Follow-up</p>
+        </div>
+        <a class="btn" href="index.html">เพิ่ม Lead</a>
+      </div>
+
+      <section class="grid grid-4" style="margin-bottom: 20px;">
+        <div class="card">
+          <div class="kpi-title">Lead ทั้งหมด</div>
+          <div class="kpi-value" id="kpiTotal">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Lead วันนี้</div>
+          <div class="kpi-value" id="kpiNewToday">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">ต้อง Follow วันนี้</div>
+          <div class="kpi-value" id="kpiFollowToday">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Booking</div>
+          <div class="kpi-value" id="kpiBooking">-</div>
+        </div>
+      </section>
+
+      <section class="grid grid-4" style="margin-bottom: 20px;">
+        <div class="card">
+          <div class="kpi-title">Walk-in</div>
+          <div class="kpi-value" id="kpiWalkIn">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Loan Process</div>
+          <div class="kpi-value" id="kpiLoan">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Transfer</div>
+          <div class="kpi-value" id="kpiTransfer">-</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title">Lost</div>
+          <div class="kpi-value" id="kpiLost">-</div>
+        </div>
+      </section>
+
+      <section class="grid grid-2" style="margin-bottom: 20px;">
+        <div class="card">
+          <h2>Lead ตาม Status</h2>
+          <div id="statusBox"></div>
+        </div>
+
+        <div class="card">
+          <h2>Lead ตาม Source</h2>
+          <div id="sourceBox"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Follow-up วันนี้ / ค้าง Follow</h2>
+        <div id="followAlert" class="alert" style="display:none;"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ลูกค้า</th>
+                <th>เบอร์</th>
+                <th>Status</th>
+                <th>Action</th>
+                <th>Due</th>
+                <th>เซลล์</th>
+              </tr>
+            </thead>
+            <tbody id="followTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function renderCountBox(obj) {
+      const entries = Object.entries(obj || {});
+      if (!entries.length) return "<p>ยังไม่มีข้อมูล</p>";
+
+      return `
+        <table>
+          <tbody>
+            ${entries.map(([key, value]) => `
+              <tr>
+                <td>${key}</td>
+                <td><strong>${value}</strong></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    async function loadDashboard() {
+      const result = await apiGet("getDashboard");
+
+      if (!result.success) {
+        alert(result.message);
+        return;
+      }
+
+      const d = result.data;
+
+      document.getElementById("kpiTotal").innerText = d.total;
+      document.getElementById("kpiNewToday").innerText = d.newToday;
+      document.getElementById("kpiFollowToday").innerText = d.followToday;
+      document.getElementById("kpiBooking").innerText = d.booking;
+      document.getElementById("kpiWalkIn").innerText = d.walkIn;
+      document.getElementById("kpiLoan").innerText = d.loan;
+      document.getElementById("kpiTransfer").innerText = d.transfer;
+      document.getElementById("kpiLost").innerText = d.lost;
+
+      document.getElementById("statusBox").innerHTML = renderCountBox(d.byStatus);
+      document.getElementById("sourceBox").innerHTML = renderCountBox(d.bySource);
+    }
+
+    async function loadFollowUps() {
+      const result = await apiGet("getFollowUpsToday");
+      const tbody = document.getElementById("followTable");
+      const alertBox = document.getElementById("followAlert");
+
+      if (!result.success) {
+        tbody.innerHTML = `<tr><td colspan="6">${result.message}</td></tr>`;
+        return;
+      }
+
+      if (result.data.length > 0) {
+        alertBox.style.display = "block";
+        alertBox.innerText = `มีลูกค้าที่ต้อง Follow / ค้าง Follow จำนวน ${result.data.length} ราย`;
+      }
+
+      tbody.innerHTML = result.data.map(lead => `
+        <tr>
+          <td><a href="lead-detail.html?lead_id=${lead.lead_id}"><strong>${safe(lead.customer_name)}</strong></a></td>
+          <td>${safe(lead.phone)}</td>
+          <td>${statusBadge(lead.status)}</td>
+          <td>${safe(lead.next_action)}</td>
+          <td>${safe(lead.next_follow_date)}</td>
+          <td>${safe(lead.sales_owner)}</td>
+        </tr>
+      `).join("");
+    }
+
+    loadDashboard();
+    loadFollowUps();
+  </script>
+</body>
+</html>
